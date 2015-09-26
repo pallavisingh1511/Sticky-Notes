@@ -11,7 +11,7 @@ if(window.openDatabase){
 
 var capture = null;
 var highestZ = 0;
-var highestIc = 0;
+var highestId = 0;
 
 //Note Object
 function Note(){
@@ -226,8 +226,52 @@ Note.prototype = {
     // On the release of key
      onKeyUp: function(e){
         this.dirty = true;
-         this.saveSoon();
-         
-     }
-    
+         this.saveSoon(); 
+     } 
+}
+
+function loaded(){
+    db.transaction(function(tx){
+        tx.executeSql("SELECT COUNT(*) FROM MySticky", [], function(result){
+            loadNotes();
+        }, function(tx, error){
+            tx.executeSql("CREATE TABLE MySticky(id REAL, noet TEXT, timestamp REAL, left TEXT, top TEXT, zindex REAL)",[],function(result){
+                loadNotes();
+            });
+        });
+    });
+}
+
+function loadNotes(){
+    db.transaction(function(tx){
+        tx.executeSql("SELECT id, note timestamp, left, top, zindex FROM MySticky", [],function(tx, result){
+            for(var i = 0; i < result.rows.length; ++i){
+                var row = result.rows.item(i);
+                var note = new Note();
+                note.id = row['id'];
+                note.text = row['note'];
+                note.timestamp = row['timestamp'];
+                note.left = row['left'];
+                note.top = row['top'];
+                note.zindex = row['zindex'];
+
+
+                if(row['id'] > highestId){
+                    highestId =row['id'];
+                }
+
+                if(row['zindex'] > highestZ){
+                    highestZ =row['zindex'];
+                }
+            }
+            if(!result.rows.length){
+                newNote();
+            }, function(tx, error){
+                alert("Failed to get notes - " + error.message);
+        });
+    });
+}
+                   
+function modifiedString(date){
+    return "Sticky Last Modified: " + date.getFullYear() + " - " + (date.getMonth() + 1) + " - " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
 }
